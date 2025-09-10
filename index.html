@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>school help</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* Your existing styles */
+    .home-hero {
+      text-align: center;
+      background-color: rgba(0, 0, 0, 0.6);
+      padding: 3rem 1rem;
+      border-radius: 12px;
+      margin: 2rem auto;
+      max-width: 800px;
+      color: #ccc;
+    }
+
+    .home-hero h1 {
+      font-size: 3rem;
+      color: #66ffcc;
+    }
+
+    .home-hero p {
+      font-size: 1.2rem;
+      margin-top: 1rem;
+    }
+
+    .dashboard-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      margin: 3rem auto;
+      max-width: 1000px;
+    }
+
+    .dashboard-card {
+      transition: transform 0.2s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+      flex: 1 1 220px;
+      background: #222;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 0 15px transparent;
+      user-select: none;
+    }
+
+    .dashboard-card:hover {
+      transform: scale(1.05);
+      border-color: currentColor;
+      box-shadow: 0 0 25px currentColor;
+    }
+
+    .dashboard-card h3 {
+      margin: 0 0 10px;
+      font-size: 1.5rem;
+    }
+
+    .dashboard-card p {
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <a href="index.html">Home</a>
+    <a href="mygames.html">My Games</a>
+    <a href="buygames.html">Buy Games</a>
+    <a href="other progekts.html">Other Projects</a>
+    <a href="server.html">Minecraft Server</a>
+    <a href="about me.html">About Me</a>
+      <a href="login.html" id="login-link">Sign In / Log In</a>
+  </nav>  
+
+  <main>
+    <section class="home-hero">
+      <h1>Sveicināt skolas melnajā čatā</h1>
+      <p>Šī vietne ir 100% anonīma, viņa domāta lai dalītos ar špikeriem, kontroldarbiem, mājasdarbiem, un meklēt palīdzību iemācīties. </p>
+    </section>
+
+    <section class="dashboard-grid">
+      <a href="buygames.html" class="dashboard-card" style="color: #00bfff;">
+        <h3>🎮 Buy Games</h3>
+        <p>Browse and purchase original indie games.</p>
+      </a>
+
+    </section>
+  </main>
+
+<script src="supabase-config.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  const supabaseClient = window.supabase.createClient(
+    window.SUPABASE_URL,
+    window.SUPABASE_ANON_KEY
+  );
+
+  // Use supabaseClient below
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    const loginLink = document.getElementById("login-link");
+    if (!loginLink) return;
+  
+    if (session && session.user) {
+      loginLink.href = "profile.html";
+      loginLink.textContent = "Profile";
+    }
+  });
+  
+</script>
+
+</body>
+</html>

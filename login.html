@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonīma Autentifikācijas Sistēma</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.39.3/umd/supabase.min.js"></script>
+    <script src="supabase-config.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        h1, p, password, input, label{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #00c3ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <!-- Pieslēgšanās forma -->
+        <div id="login-form" class="auth-form">
+            <div class="auth-header">
+                <h1>Pierakstīties</h1>
+                <p>Ievadiet savus datus</p>
+            </div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="login-username">Lietotājvārds</label>
+                    <input type="text" id="login-username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="login-password">Parole</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                
+                <button type="submit" class="btn-primary">Pierakstīties</button>
+                
+                <p class="switch-form">
+                    Nav konta? 
+                    <a href="#" id="show-signup">Reģistrējies šeit</a>
+                </p>
+            </form>
+        </div>
+
+        <!-- Reģistrācijas forma -->
+        <div id="signup-form" class="auth-form" style="display: none;">
+            <div class="auth-header">
+                <h1>Reģistrēties</h1>
+                <p>Izveidot jaunu kontu</p>
+            </div>
+            
+            <form id="signupForm">
+                <div class="form-group">
+                    <label for="signup-username">Lietotājvārds</label>
+                    <input type="text" id="signup-username" required minlength="3">
+                </div>
+                
+                <div class="form-group">
+                    <label for="signup-password">Parole</label>
+                    <input type="password" id="signup-password" required minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="signup-confirm">Apstiprināt paroli</label>
+                    <input type="password" id="signup-confirm" required>
+                </div>
+                
+                <button type="submit" class="btn-primary">Reģistrēties</button>
+                
+                <p class="switch-form">
+                    Jau ir konts? 
+                    <a href="#" id="show-login">Pierakstieties šeit</a>
+                </p>
+            </form>
+        </div>
+
+        <!-- Galvenā panelis -->
+        <div id="dashboard" class="auth-form" style="display: none;">
+            <div class="auth-header">
+                <h1>Laipni lūdzam!</h1>
+                <p>Jūs esat veiksmīgi pieslēdzies</p>
+            </div>
+            
+            <div class="user-info">
+                <p><strong>Lietotājvārds:</strong> <span id="current-username"></span></p>
+                <p><strong>Lietotāja ID:</strong> <span id="current-userid"></span></p>
+                <p><strong>Pieslēgšanās laiks:</strong> <span id="login-time"></span></p>
+            </div>
+            
+            <button id="logout-btn" class="btn-secondary">Izrakstīties</button>
+        </div>
+
+        <!-- Ziņojumu parādīšana -->
+        <div id="message" class="message" style="display: none;"></div>
+    </div>
+
+    <script>
+        let supabase;
+        
+        // Inicializē Supabase klientu
+        try {
+            supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+            console.log('Supabase inicializēts');
+        } catch (error) {
+            console.error('Supabase inicializācijas kļūda:', error);
+            showMessage('Kļūda: Nevarēja inicializēt Supabase', 'error');
+        }
+        
+        // DOM elementi
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const dashboard = document.getElementById('dashboard');
+        const messageDiv = document.getElementById('message');
+        
+        // Formu pārslēgšana
+        document.getElementById('show-signup').addEventListener('click', function(e) {
+            e.preventDefault();
+            loginForm.style.display = 'none';
+            signupForm.style.display = 'block';
+            clearMessage();
+        });
+        
+        document.getElementById('show-login').addEventListener('click', function(e) {
+            e.preventDefault();
+            signupForm.style.display = 'none';
+            loginForm.style.display = 'block';
+            clearMessage();
+        });
+
+        // Utilītas funkcijas
+        function showMessage(text, type) {
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + (type || 'info');
+            messageDiv.style.display = 'block';
+            setTimeout(clearMessage, 5000);
+        }
+
+        function clearMessage() {
+            messageDiv.style.display = 'none';
+            messageDiv.textContent = '';
+        }
+
+        function createEmail(username) {
+            return username + '@anonymous.local';
+        }
+
+        // Reģistrācijas funkcionalitāte
+        document.getElementById('signupForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('signup-username').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm').value;
+            
+            // Validācija
+            if (!username || !password || !confirmPassword) {
+                showMessage('Visi lauki ir obligāti!', 'error');
+                return;
+            }
+            
+            if (username.length < 3) {
+                showMessage('Lietotājvārdam jābūt vismaz 3 simbolus garam!', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage('Parolei jābūt vismaz 6 simbolus garai!', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showMessage('Paroles nesakrīt!', 'error');
+                return;
+            }
+
+            try {
+                const email = createEmail(username);
+                
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            username: username
+                        }
+                    }
+                });
+
+                if (error) {
+                    console.error('Reģistrācijas kļūda:', error);
+                    if (error.message.includes('already')) {
+                        showMessage('Lietotājvārds jau aizņemts!', 'error');
+                    } else {
+                        showMessage('Reģistrācijas kļūda: ' + error.message, 'error');
+                    }
+                    return;
+                }
+
+                if (data && data.user) {
+                    showMessage('Konts izveidots veiksmīgi!', 'success');
+                    showDashboard(data.user, username);
+                }
+                
+            } catch (error) {
+                console.error('Kļūda:', error);
+                showMessage('Radās neparedzēta kļūda!', 'error');
+            }
+        });
+
+        // Pieslēgšanās funkcionalitāte
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            
+            if (!username || !password) {
+                showMessage('Ievadiet lietotājvārdu un paroli!', 'error');
+                return;
+            }
+
+            try {
+                const email = createEmail(username);
+                
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) {
+                    console.error('Pieslēgšanās kļūda:', error);
+                    showMessage('Nepareizs lietotājvārds vai parole!', 'error');
+                    return;
+                }
+
+                if (data && data.user) {
+                    showMessage('Pieslēgšanās veiksmīga!', 'success');
+                    showDashboard(data.user, username);
+                }
+                
+            } catch (error) {
+                console.error('Kļūda:', error);
+                showMessage('Radās neparedzēta kļūda!', 'error');
+            }
+        });
+
+        // Izrakstīšanās funkcionalitāte
+        document.getElementById('logout-btn').addEventListener('click', async function() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                
+                if (error) {
+                    console.error('Izrakstīšanās kļūda:', error);
+                    showMessage('Izrakstīšanās kļūda!', 'error');
+                    return;
+                }
+                
+                showMessage('Veiksmīgi izrakstījies!', 'success');
+                showLoginForm();
+                
+            } catch (error) {
+                console.error('Kļūda:', error);
+                showMessage('Radās kļūda!', 'error');
+            }
+        });
+
+        // Rādīt galveno paneli
+        function showDashboard(user, username) {
+            loginForm.style.display = 'none';
+            signupForm.style.display = 'none';
+            dashboard.style.display = 'block';
+            
+            document.getElementById('current-username').textContent = username;
+            document.getElementById('current-userid').textContent = user.id;
+            document.getElementById('login-time').textContent = new Date().toLocaleString('lv-LV');
+            
+            clearForms();
+        }
+
+        // Rādīt pieslēgšanās formu
+        function showLoginForm() {
+            dashboard.style.display = 'none';
+            signupForm.style.display = 'none';
+            loginForm.style.display = 'block';
+            
+            clearForms();
+        }
+
+        // Notīrīt formas
+        function clearForms() {
+            document.getElementById('loginForm').reset();
+            document.getElementById('signupForm').reset();
+        }
+
+        // Pārbaudīt vai lietotājs jau ir pieslēdzies
+        window.addEventListener('load', async function() {
+            if (!supabase) return;
+            
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (user && user.user_metadata && user.user_metadata.username) {
+                    showDashboard(user, user.user_metadata.username);
+                }
+            } catch (error) {
+                console.log('Nav aktīvas sesijas');
+            }
+        });
+
+        // Klausīties autentifikācijas stāvokļa izmaiņas
+        if (supabase) {
+            supabase.auth.onAuthStateChange(function(event, session) {
+                if (event === 'SIGNED_OUT' || !session) {
+                    showLoginForm();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
