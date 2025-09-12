@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* Reset and base styles */
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #navbar {
+      /* Let the navbar maintain its styles from your CSS */
+    }
+
+    /* Auth overlay for non-logged users */
+    #auth-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(5px);
+    }
+
+    #auth-message {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 2rem;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      margin: 1rem;
+    }
+
+    #auth-message h2 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    #auth-message p {
+      color: #666;
+      margin-bottom: 1.5rem;
+    }
+
+    #auth-message a {
+      display: inline-block;
+      padding: 10px 20px;
+      background: #00bfff;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    #auth-message a:hover {
+      background: #0099cc;
+    }
+
+    /* Chat container - fully transparent background */
+    #chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 1rem;
+      overflow: hidden;
+      position: relative;
+      /* Completely transparent - background from your styles.css will show */
+      background: transparent;
+      min-height: calc(100vh - 60px); /* Adjust based on your navbar height */
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding-bottom: 1rem;
+      scroll-behavior: smooth;
+      /* Transparent background */
+      background: transparent;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 10px 14px;
+      border-radius: 20px;
+      word-wrap: break-word;
+      font-size: 0.95rem;
+      line-height: 1.3;
+      position: relative;
+      display: inline-block;
+      /* Semi-transparent backgrounds for readability */
+      backdrop-filter: blur(10px);
+    }
+
+    .message.self {
+      background: rgba(220, 248, 198, 0.8);
+      color: #000;
+      align-self: flex-end;
+      border: 1px solid rgba(220, 248, 198, 0.3);
+    }
+
+    .message.other {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      align-self: flex-start;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .timestamp {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      margin-top: 2px;
+      text-align: right;
+    }
+
+    #input-form {
+      display: flex;
+      padding-top: 0.5rem;
+      background: transparent;
+      gap: 0.5rem;
+    }
+
+    #message-input {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      outline: none;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    #message-input:focus {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    #message-input::placeholder {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    #send-btn {
+      padding: 10px 20px;
+      border-radius: 20px;
+      border: none;
+      background: rgba(0, 191, 255, 0.8);
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 191, 255, 0.3);
+    }
+
+    #send-btn:hover {
+      background: rgba(0, 153, 204, 0.9);
+      transform: translateY(-1px);
+    }
+
+    /* Hide scrollbar for WebKit */
+    #messages::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Hidden class */
+    .hidden {
+      display: none !important;
+    }
+
+    /* User info display */
+    #user-info {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.5rem 1rem;
+      border-radius: 15px;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.85rem;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div id="navbar"></div>
+  
+  <!-- Auth overlay for non-logged users -->
+  <div id="auth-overlay" class="hidden">
+    <div id="auth-message">
+      <h2>🔒 Login Required</h2>
+      <p>Please log in to access the chat feature.</p>
+      <a href="login.html">Login Now</a>
+    </div>
+  </div>
+
+  <!-- Chat interface (hidden by default) -->
+  <div id="chat-container" class="hidden">
+    <div id="user-info">
+      Logged in as: <span id="current-user"></span>
+    </div>
+    <div id="messages"></div>
+    <form id="input-form">
+      <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" />
+      <button type="submit" id="send-btn">Send</button>
+    </form>
+  </div>
+
+  <script>
+    // Load topbar dynamically
+    fetch("topbar.html")
+      .then(res => res.text())
+      .then(data => {
+        document.getElementById("navbar").innerHTML = data;
+        
+        // Update login link based on session
+        const loginLink = document.getElementById("login-link");
+        if (loginLink) {
+          const session = localStorage.getItem("currentUser");
+          if (session) {
+            try {
+              const user = JSON.parse(session);
+              loginLink.textContent = user.username;
+              loginLink.href = "profile.html";
+            } catch {
+              loginLink.textContent = "Login";
+              loginLink.href = "login.html";
+            }
+          } else {
+            loginLink.textContent = "Login";
+            loginLink.href = "login.html";
+          }
+        }
+        
+        // Initialize chat after navbar is loaded
+        initializeChat();
+      })
+      .catch(err => console.error("Failed to load navbar:", err));
+
+    function initializeChat() {
+      // Check if user is logged in
+      const currentUser = localStorage.getItem("currentUser");
+      const authOverlay = document.getElementById("auth-overlay");
+      const chatContainer = document.getElementById("chat-container");
+      
+      if (!currentUser) {
+        // Show auth overlay, hide chat
+        authOverlay.classList.remove("hidden");
+        chatContainer.classList.add("hidden");
+        return;
+      }
+
+      // User is logged in, show chat
+      try {
+        const user = JSON.parse(currentUser);
+        document.getElementById("current-user").textContent = user.username;
+        authOverlay.classList.add("hidden");
+        chatContainer.classList.remove("hidden");
+        
+        // Initialize Supabase and chat functionality
+        setupChat(user.username);
+      } catch (error) {
+        console.error("Invalid user session:", error);
+        // Invalid session, show auth overlay
+        localStorage.removeItem("currentUser");
+        authOverlay.classList.remove("hidden");
+        chatContainer.classList.add("hidden");
+      }
+    }
+
+    function setupChat(username) {
+      // Load supabase config
+      const script = document.createElement('script');
+      script.src = 'supabase-config.js';
+      script.onload = function() {
+        const supabaseClient = window.supabase.createClient(
+          window.SUPABASE_URL,
+          window.SUPABASE_ANON_KEY
+        );
+
+        const messagesDiv = document.getElementById("messages");
+        const inputForm = document.getElementById("input-form");
+        const messageInput = document.getElementById("message-input");
+
+        // Load existing messages
+        async function loadMessages() {
+          const { data, error } = await supabaseClient
+            .from("messages")
+            .select("*")
+            .order("created_at", { ascending: true });
+
+          if (error) return console.error(error);
+
+          messagesDiv.innerHTML = "";
+          data.forEach(msg => appendMessage(msg));
+          scrollToBottom();
+        }
+
+        function appendMessage(msg) {
+          const div = document.createElement("div");
+          div.classList.add("message");
+          div.classList.add(msg.sender === username ? "self" : "other");
+          div.innerHTML = `
+            <div><strong>${msg.sender}:</strong> ${msg.content}</div>
+            <div class="timestamp">${new Date(msg.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+          `;
+          messagesDiv.appendChild(div);
+        }
+
+        function scrollToBottom() {
+          messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Listen for new messages in real-time
+        supabaseClient
+          .channel("public:messages")
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, payload => {
+            appendMessage(payload.new);
+            scrollToBottom();
+          })
+          .subscribe();
+
+        // Send message
+        inputForm.addEventListener("submit", async e => {
+          e.preventDefault();
+          const content = messageInput.value.trim();
+          if (!content) return;
+
+          await supabaseClient.from("messages").insert([{ sender: username, content }]);
+          messageInput.value = "";
+        });
+
+        // Initial load
+        loadMessages();
+        
+        // Focus input
+        messageInput.focus();
+      };
+      document.head.appendChild(script);
+    }
+
+    // Listen for storage changes (logout from another tab)
+    window.addEventListener('storage', function(e) {
+      if (e.key === 'currentUser' && !e.newValue) {
+        // User logged out, reload page to show auth overlay
+        window.location.reload();
+      }
+    });
+  </script>
+</body>
+</html>

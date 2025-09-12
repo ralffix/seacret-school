@@ -11,12 +11,34 @@
 
 
     <script>
-      // Load topbar.html into #navbar
-  fetch("topbar.html")
-    .then(response => response.text())
-    .then(data => {
-      document.getElementById("navbar").innerHTML = data;
-    });
+      // Load topbar dynamically
+fetch("topbar.html")
+  .then(res => res.text())
+  .then(data => {
+    document.getElementById("navbar").innerHTML = data;
+
+    // Optional: now you can safely attach nav handlers
+    const loginLink = document.getElementById("login-link");
+    if (loginLink) {
+      // Example: check session and update text
+      const session = localStorage.getItem("currentUser");
+      if (session) {
+        try {
+          const user = JSON.parse(session);
+          loginLink.textContent = user.username;
+          loginLink.href = "profile.html";
+        } catch {
+          loginLink.textContent = "Login";
+          loginLink.href = "login.html";
+        }
+      } else {
+        loginLink.textContent = "Login";
+        loginLink.href = "login.html";
+      }
+    }
+  })
+  .catch(err => console.error("Failed to load navbar:", err));
+
     <script>
 </body>
 </html>

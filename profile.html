@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lunimus - Profils</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="navbar"></div>
+
+  <main>
+    <!-- Profile Container -->
+    <div id="profile-container" class="login-container">
+      <h2>Mans Profils</h2>
+      
+      <!-- User Info Display -->
+      <div id="user-info" class="terms-container" style="margin: 0; padding: 1.5rem; background-color: rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+          <span><strong>Lietotājvārds:</strong></span>
+          <span id="display-username" style="color: #66ffcc;"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+          <span><strong>Lietotāja ID:</strong></span>
+          <span id="display-userid" style="color: #00bfff;"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+          <span><strong>Konts izveidots:</strong></span>
+          <span id="display-created" style="color: #ccc;"></span>
+        </div>
+        <div style="display: flex; justify-content: space-between;">
+          <span><strong>Pēdējā pieslēgšanās:</strong></span>
+          <span id="display-lastlogin" style="color: #ccc;"></span>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin: 1.5rem 0;">
+        <button id="change-password-btn" style="flex: 1; min-width: 140px;">Mainīt paroli</button>
+        <button id="delete-account-btn" style="flex: 1; min-width: 140px; background: linear-gradient(to right, #ff6b6b, #ff5252); color: white;">Dzēst kontu</button>
+      </div>
+
+      <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+        <button id="back-home-btn" style="flex: 1;" onclick="window.location.href='index.html'">Atpakaļ uz sākumu</button>
+        <button id="logout-btn" style="flex: 1; background: linear-gradient(to right, #ffa726, #ff9800); color: black;">Izrakstīties</button>
+      </div>
+
+      <div id="message"></div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="password-modal" class="modal">
+      <div class="modal-content login-container" style="margin: 0; max-width: 400px;">
+        <span id="modal-close">&times;</span>
+        <h2 style="margin-bottom: 1.5rem;">Mainīt paroli</h2>
+        
+        <input id="current-password" type="password" placeholder="Pašreizējā parole" />
+        <input id="new-password" type="password" placeholder="Jaunā parole" />
+        <input id="confirm-new-password" type="password" placeholder="Apstiprināt jauno paroli" />
+        
+        <button id="save-password-btn">Saglabāt paroli</button>
+        <button id="cancel-password-btn" style="background-color: #666; color: white;">Atcelt</button>
+        
+        <div id="password-message"></div>
+      </div>
+    </div>
+
+    <!-- Delete Account Confirmation Modal -->
+    <div id="delete-modal" class="modal">
+      <div class="modal-content login-container" style="margin: 0; max-width: 400px;">
+        <span id="delete-modal-close">&times;</span>
+        <h2 style="margin-bottom: 1.5rem; color: #ff6b6b;">Dzēst kontu</h2>
+        
+        <p style="color: #ccc; text-align: center; margin-bottom: 1.5rem;">
+          Vai tiešām vēlaties dzēst savu kontu? Šo darbību nevar atsaukt!
+        </p>
+        
+        <input id="delete-password" type="password" placeholder="Ievadiet paroli, lai apstiprinātu" />
+        
+        <button id="confirm-delete-btn" style="background: linear-gradient(to right, #ff6b6b, #ff5252); color: white;">Dzēst kontu</button>
+        <button id="cancel-delete-btn" style="background-color: #666; color: white;">Atcelt</button>
+        
+        <div id="delete-message"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="supabase-config.js"></script>
+  <script>
+    // Initialize Supabase client
+    const supabaseClient = window.supabase.createClient(
+      window.SUPABASE_URL,
+      window.SUPABASE_ANON_KEY
+    );
+
+    // Load topbar dynamically
+    fetch("topbar.html")
+      .then(res => res.text())
+      .then(data => {
+        document.getElementById("navbar").innerHTML = data;
+
+        // Update login link to show username if logged in
+        const loginLink = document.getElementById("login-link");
+        if (loginLink) {
+          const session = localStorage.getItem("currentUser");
+          if (session) {
+            try {
+              const user = JSON.parse(session);
+              loginLink.textContent = user.username;
+              loginLink.href = "profile.html";
+            } catch {
+              loginLink.textContent = "Login";
+              loginLink.href = "login.html";
+            }
+          } else {
+            loginLink.textContent = "Login";
+            loginLink.href = "login.html";
+          }
+        }
+      })
+      .catch(err => console.error("Failed to load navbar:", err));
+
+    // DOM elements
+    const displayUsername = document.getElementById('display-username');
+    const displayUserid = document.getElementById('display-userid');
+    const displayCreated = document.getElementById('display-created');
+    const displayLastlogin = document.getElementById('display-lastlogin');
+    const messageDiv = document.getElementById('message');
+
+    // Buttons
+    const changePasswordBtn = document.getElementById('change-password-btn');
+    const deleteAccountBtn = document.getElementById('delete-account-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    // Password Modal
+    const passwordModal = document.getElementById('password-modal');
+    const modalClose = document.getElementById('modal-close');
+    const currentPasswordInput = document.getElementById('current-password');
+    const newPasswordInput = document.getElementById('new-password');
+    const confirmNewPasswordInput = document.getElementById('confirm-new-password');
+    const savePasswordBtn = document.getElementById('save-password-btn');
+    const cancelPasswordBtn = document.getElementById('cancel-password-btn');
+    const passwordMessageDiv = document.getElementById('password-message');
+
+    // Delete Modal
+    const deleteModal = document.getElementById('delete-modal');
+    const deleteModalClose = document.getElementById('delete-modal-close');
+    const deletePasswordInput = document.getElementById('delete-password');
+    const confirmDeleteBtn = document.getElementById('confirm-delete-btn');
+    const cancelDeleteBtn = document.getElementById('cancel-delete-btn');
+    const deleteMessageDiv = document.getElementById('delete-message');
+
+    let currentUser = null;
+
+    // Hash password function
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hash))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    }
+
+    // Show message function
+    function showMessage(msg, isError = false, targetDiv = messageDiv) {
+      targetDiv.textContent = msg;
+      targetDiv.style.color = isError ? '#ff6b6b' : '#66ffcc';
+      targetDiv.style.textAlign = 'center';
+      targetDiv.style.marginTop = '1rem';
+      targetDiv.style.fontWeight = 'bold';
+    }
+
+    // Clear password form
+    function clearPasswordForm() {
+      currentPasswordInput.value = '';
+      newPasswordInput.value = '';
+      confirmNewPasswordInput.value = '';
+      passwordMessageDiv.textContent = '';
+    }
+
+    // Clear delete form
+    function clearDeleteForm() {
+      deletePasswordInput.value = '';
+      deleteMessageDiv.textContent = '';
+    }
+
+    // Load user data
+    function loadUserData() {
+      const session = localStorage.getItem('currentUser');
+      if (!session) {
+        showMessage('Nav pieslēgts! Pārsūtām uz pieslēgšanās lapu...', true);
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
+        return;
+      }
+
+      try {
+        currentUser = JSON.parse(session);
+        displayUsername.textContent = currentUser.username;
+        displayUserid.textContent = currentUser.id;
+        
+        if (currentUser.created_at) {
+          displayCreated.textContent = new Date(currentUser.created_at).toLocaleString('lv-LV');
+        } else {
+          displayCreated.textContent = 'Nav pieejams';
+        }
+        
+        displayLastlogin.textContent = new Date().toLocaleString('lv-LV');
+        
+      } catch (error) {
+        console.error('Session parsing error:', error);
+        localStorage.removeItem('currentUser');
+        showMessage('Sesijas kļūda! Lūdzu pieslēdzieties vēlreiz.', true);
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
+      }
+    }
+
+    // Change password modal handlers
+    changePasswordBtn.onclick = () => {
+      passwordModal.style.display = 'flex';
+      currentPasswordInput.focus();
+    };
+
+    modalClose.onclick = cancelPasswordBtn.onclick = () => {
+      passwordModal.style.display = 'none';
+      clearPasswordForm();
+    };
+
+    // Delete account modal handlers
+    deleteAccountBtn.onclick = () => {
+      deleteModal.style.display = 'flex';
+      deletePasswordInput.focus();
+    };
+
+    deleteModalClose.onclick = cancelDeleteBtn.onclick = () => {
+      deleteModal.style.display = 'none';
+      clearDeleteForm();
+    };
+
+    // Save new password
+    savePasswordBtn.onclick = async () => {
+      const currentPassword = currentPasswordInput.value;
+      const newPassword = newPasswordInput.value;
+      const confirmNewPassword = confirmNewPasswordInput.value;
+
+      if (!currentPassword || !newPassword || !confirmNewPassword) {
+        return showMessage('Visi lauki ir obligāti!', true, passwordMessageDiv);
+      }
+
+      if (newPassword.length < 6) {
+        return showMessage('Jaunajai parolei jābūt vismaz 6 simbolus garai!', true, passwordMessageDiv);
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        return showMessage('Jaunās paroles nesakrīt!', true, passwordMessageDiv);
+      }
+
+      try {
+        // Verify current password
+        const currentHashedPassword = await hashPassword(currentPassword);
+        const { data: userData, error: verifyError } = await supabaseClient
+          .from('users')
+          .select('password')
+          .eq('id', currentUser.id)
+          .single();
+
+        if (verifyError || !userData || userData.password !== currentHashedPassword) {
+          return showMessage('Pašreizējā parole ir nepareiza!', true, passwordMessageDiv);
+        }
+
+        // Update password
+        const newHashedPassword = await hashPassword(newPassword);
+        const { error: updateError } = await supabaseClient
+          .from('users')
+          .update({ password: newHashedPassword })
+          .eq('id', currentUser.id);
+
+        if (updateError) {
+          return showMessage('Kļūda mainot paroli: ' + updateError.message, true, passwordMessageDiv);
+        }
+
+        showMessage('Parole veiksmīgi nomainīta!', false, passwordMessageDiv);
+        setTimeout(() => {
+          passwordModal.style.display = 'none';
+          clearPasswordForm();
+        }, 2000);
+
+      } catch (error) {
+        console.error('Password change error:', error);
+        showMessage('Kļūda: ' + error.message, true, passwordMessageDiv);
+      }
+    };
+
+    // Confirm delete account
+    confirmDeleteBtn.onclick = async () => {
+      const password = deletePasswordInput.value;
+
+      if (!password) {
+        return showMessage('Ievadiet paroli!', true, deleteMessageDiv);
+      }
+
+      try {
+        // Verify password
+        const hashedPassword = await hashPassword(password);
+        const { data: userData, error: verifyError } = await supabaseClient
+          .from('users')
+          .select('password')
+          .eq('id', currentUser.id)
+          .single();
+
+        if (verifyError || !userData || userData.password !== hashedPassword) {
+          return showMessage('Nepareiza parole!', true, deleteMessageDiv);
+        }
+
+        // Delete account
+        const { error: deleteError } = await supabaseClient
+          .from('users')
+          .delete()
+          .eq('id', currentUser.id);
+
+        if (deleteError) {
+          return showMessage('Kļūda dzēšot kontu: ' + deleteError.message, true, deleteMessageDiv);
+        }
+
+        showMessage('Konts veiksmīgi izdzēsts!', false, deleteMessageDiv);
+        localStorage.removeItem('currentUser');
+        
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 2000);
+
+      } catch (error) {
+        console.error('Account deletion error:', error);
+        showMessage('Kļūda: ' + error.message, true, deleteMessageDiv);
+      }
+    };
+
+    // Logout handler
+    logoutBtn.onclick = () => {
+      localStorage.removeItem('currentUser');
+      showMessage('Veiksmīgi izrakstījies!');
+      setTimeout(() => {
+        window.location.href = 'index.html';
+      }, 1500);
+    };
+
+    // Close modals when clicking outside
+    window.onclick = (event) => {
+      if (event.target === passwordModal) {
+        passwordModal.style.display = 'none';
+        clearPasswordForm();
+      }
+      if (event.target === deleteModal) {
+        deleteModal.style.display = 'none';
+        clearDeleteForm();
+      }
+    };
+
+    // Enter key handlers for password modal
+    currentPasswordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') newPasswordInput.focus();
+    });
+
+    newPasswordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') confirmNewPasswordInput.focus();
+    });
+
+    confirmNewPasswordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') savePasswordBtn.click();
+    });
+
+    // Enter key handler for delete modal
+    deletePasswordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') confirmDeleteBtn.click();
+    });
+
+    // Load user data on page load
+    window.onload = loadUserData;
+  </script>
+</body>
+</html>

@@ -75,9 +75,44 @@
     </section>
 
     <section class="dashboard-grid">
-      <a href="buygames.html" class="dashboard-card" style="color: #00bfff;">
-        <h3>🎮 Buy Games</h3>
-        <p>Browse and purchase original indie games.</p>
+      <a href="spikeri.html" class="dashboard-card" style="color: #66ffcc;">
+        <h3>📝 Špikeri</h3>
+        <p>Dalieties ar špikeriem un saņemiet palīdzību eksāmenos</p>
+      </a>
+
+      <a href="kontroldarbi.html" class="dashboard-card" style="color: #ff6b6b;">
+        <h3>📊 Kontroldarbi</h3>
+        <p>Atbildes uz kontroldarbiem un testiem</p>
+      </a>
+
+      <a href="majasdarbi.html" class="dashboard-card" style="color: #ffa726;">
+        <h3>📚 Mājas darbi</h3>
+        <p>Palīdzība ar mājas darbu izpildi</p>
+      </a>
+
+      <a href="macisanas-materiali.html" class="dashboard-card" style="color: #ab47bc;">
+        <h3>🎓 Mācīšanās materiāli</h3>
+        <p>Konspekti, prezentācijas un citi mācību materiāli</p>
+      </a>
+
+      <a href="chats.html" class="dashboard-card" style="color: #26c6da;">
+        <h3>💬 Anonīmais čats</h3>
+        <p>Uzdod jautājumus un saņem palīdzību no citiem</p>
+      </a>
+
+      <a href="kalendars.html" class="dashboard-card" style="color: #66bb6a;">
+        <h3>📅 Eksāmenu kalendārs</h3>
+        <p>Plāno savus eksāmenus un kontroldarbus</p>
+      </a>
+
+      <a href="resursi.html" class="dashboard-card" style="color: #5c6bc0;">
+        <h3>🔗 Noderīgi resursi</h3>
+        <p>Saites uz mācību platformām un rīkiem</p>
+      </a>
+
+      <a href="profils.html" class="dashboard-card" style="color: #8d6e63;">
+        <h3>👤 Mans profils</h3>
+        <p>Pārvaldi savu kontu un iestatījumus</p>
       </a>
     </section>
   </main>
@@ -95,48 +130,27 @@
     .then(res => res.text())
     .then(data => {
       document.getElementById("navbar").innerHTML = data;
-      checkLogin();
-    });
 
-  async function checkLogin() {
-  const loginLink = document.getElementById("login-link");
-  if (!loginLink) return;
-
-  // Get saved username & password from localStorage
-  const storedUsername = localStorage.getItem("username");
-  const storedPassword = localStorage.getItem("password");
-
-  if (!storedUsername || !storedPassword) {
-    loginLink.href = "login.html";
-    loginLink.textContent = "Login";
-    return;
-  }
-
-  // Check users table
-  const { data: users, error } = await supabaseClient
-    .from("users")
-    .select("*")
-    .eq("username", storedUsername)
-    .eq("password", storedPassword)
-    .limit(1);
-
-  if (error) {
-    console.error("Supabase query error:", error);
-    loginLink.href = "login.html";
-    loginLink.textContent = "Login";
-    return;
-  }
-
-  if (users && users.length > 0) {
-    // ✅ Show username instead of just "Profile"
-    loginLink.href = "profile.html";
-    loginLink.textContent = users[0].username;
-  } else {
-    loginLink.href = "login.html";
-    loginLink.textContent = "Login";
-  }
-}
-
+      // Check session and update login link
+      const loginLink = document.getElementById("login-link");
+      if (loginLink) {
+        const session = localStorage.getItem("currentUser");
+        if (session) {
+          try {
+            const user = JSON.parse(session);
+            loginLink.textContent = user.username;
+            loginLink.href = "profile.html";
+          } catch {
+            loginLink.textContent = "Login";
+            loginLink.href = "login.html";
+          }
+        } else {
+          loginLink.textContent = "Login";
+          loginLink.href = "login.html";
+        }
+      }
+    })
+    .catch(err => console.error("Failed to load navbar:", err));
 </script>
 </body>
 </html>
