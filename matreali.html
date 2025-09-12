@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+  <meta charset="UTF-8">
+  <title>Mācību Materiāli</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1e3c72, #2a5298);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 1.5rem;
+      text-align: center;
+      font-size: 2rem;
+      font-weight: bold;
+      text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+    }
+
+    .container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 2rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100px;
+    }
+
+    .card {
+      background: rgba(0,0,0,0.5);
+      padding: 1.5rem;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0, 191, 255, 0.4);
+    }
+
+    .card h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 1.3rem;
+    }
+
+    .card p {
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <header>Mācību Materiāli</header>
+
+  <div class="container">
+    <a href="https://example.com/pdf1.pdf" target="_blank" class="card">
+      <h3>Matemātika – Algebras pamati</h3>
+      <p>PDF fails ar uzdevumiem un teoriju par algebru.</p>
+    </a>
+
+    <a href="https://example.com/video1" target="_blank" class="card">
+      <h3>Fizika – Kustības likumi</h3>
+      <p>Video lekcija ar praktiskiem piemēriem un demonstrācijām.</p>
+    </a>
+
+    <a href="https://example.com/chemistry" target="_blank" class="card">
+      <h3>Ķīmija – Periodiskā tabula</h3>
+      <p>Interaktīvs resurss, lai iegaumētu elementus.</p>
+    </a>
+
+    <!-- Pievieno jaunus materiālus šeit -->
+  </div>
+</body>
+</html>
