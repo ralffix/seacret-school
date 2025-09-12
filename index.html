@@ -99,43 +99,44 @@
     });
 
   async function checkLogin() {
-    const loginLink = document.getElementById("login-link");
-    if (!loginLink) return;
+  const loginLink = document.getElementById("login-link");
+  if (!loginLink) return;
 
-    // Get saved username & password from localStorage (from your login form)
-    const storedUsername = localStorage.getItem("username");
-    const storedPassword = localStorage.getItem("password");
+  // Get saved username & password from localStorage
+  const storedUsername = localStorage.getItem("username");
+  const storedPassword = localStorage.getItem("password");
 
-    if (!storedUsername || !storedPassword) {
-      loginLink.href = "login.html";
-      loginLink.textContent = "Login";
-      return;
-    }
-
-    // Check users table
-    const { data: users, error } = await supabaseClient
-      .from("users")
-      .select("*")
-      .eq("username", storedUsername)
-      .eq("password", storedPassword)
-      .limit(1);
-
-    if (error) {
-      console.error("Supabase query error:", error);
-      loginLink.href = "login.html";
-      loginLink.textContent = "Login";
-      return;
-    }
-
-    if (users && users.length > 0) {
-      // User exists → show Profile
-      loginLink.href = "profile.html";
-      loginLink.textContent = "Profile";
-    } else {
-      loginLink.href = "login.html";
-      loginLink.textContent = "Login";
-    }
+  if (!storedUsername || !storedPassword) {
+    loginLink.href = "login.html";
+    loginLink.textContent = "Login";
+    return;
   }
+
+  // Check users table
+  const { data: users, error } = await supabaseClient
+    .from("users")
+    .select("*")
+    .eq("username", storedUsername)
+    .eq("password", storedPassword)
+    .limit(1);
+
+  if (error) {
+    console.error("Supabase query error:", error);
+    loginLink.href = "login.html";
+    loginLink.textContent = "Login";
+    return;
+  }
+
+  if (users && users.length > 0) {
+    // ✅ Show username instead of just "Profile"
+    loginLink.href = "profile.html";
+    loginLink.textContent = users[0].username;
+  } else {
+    loginLink.href = "login.html";
+    loginLink.textContent = "Login";
+  }
+}
+
 </script>
 </body>
 </html>
